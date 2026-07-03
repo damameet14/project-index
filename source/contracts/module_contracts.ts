@@ -41,4 +41,10 @@ export interface DetectedModule {
 
   /** Entry point file, if identifiable */
   readonly entryPointFilePath: string | null;
+
+  /** Name of the parent module, if this is a sub-module */
+  readonly parentModuleName?: string | null;
+
+  /** Names of sub-modules contained within this module */
+  readonly subModuleNames?: string[];
 }

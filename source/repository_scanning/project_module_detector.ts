@@ -7,6 +7,7 @@
  */
 
 import { readdir, readFile, stat } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { join, basename } from "node:path";
 import type { DetectedModule } from "../contracts/index.js";
 import type { IgnorePatternResolver } from "./ignore_pattern_resolver.js";
@@ -239,31 +240,122 @@ function buildModulesFromDirectoryStructure(
   discoveredFiles: DiscoveredFileEntry[],
   repositoryRootPath: string,
 ): DetectedModule[] {
-  // Group files by their top-level directory
-  const directoryGroups = new Map<string, DiscoveredFileEntry[]>();
+  const modulePaths = new Set<string>();
+  modulePaths.add("."); // Root module is always there
 
+  const isEntryPointFile = (fileName: string) => {
+    return ["index.ts", "index.tsx", "index.js", "index.jsx", "__init__.py"].includes(fileName);
+  };
+
+  const hasModuleDeclaration = (dirPath: string) => {
+    if (dirPath === ".") return false;
+    const moduleMdPath = join(repositoryRootPath, dirPath, "MODULE.md");
+    return existsSync(moduleMdPath);
+  };
+
+  // Find all directories that contain entry points or have MODULE.md on disk,
+  // plus the top-level directories of all discovered files.
   for (const file of discoveredFiles) {
-    const topLevelDirectory = getTopLevelDirectory(file.relativePath);
-    const existing = directoryGroups.get(topLevelDirectory) ?? [];
-    existing.push(file);
-    directoryGroups.set(topLevelDirectory, existing);
+    const relativePath = file.relativePath;
+    const parts = relativePath.split("/");
+    const fileName = parts.pop() ?? "";
+
+    if (parts.length > 0) {
+      modulePaths.add(parts[0]);
+    }
+
+    let currentDir = parts.join("/");
+    while (currentDir && currentDir !== ".") {
+      if (isEntryPointFile(fileName) || hasModuleDeclaration(currentDir)) {
+        modulePaths.add(currentDir);
+      }
+      const dirParts = currentDir.split("/");
+      dirParts.pop();
+      currentDir = dirParts.join("/");
+    }
   }
 
+  // Sort modules by depth (deepest first) to assign files to the most specific module
+  const sortedModulePaths = [...modulePaths].sort((a, b) => b.length - a.length);
+
+  // Group files by module
+  const moduleFilesMap = new Map<string, DiscoveredFileEntry[]>();
+  for (const modulePath of sortedModulePaths) {
+    moduleFilesMap.set(modulePath, []);
+  }
+
+  const assignedFiles = new Set<string>();
+  for (const file of discoveredFiles) {
+    for (const modulePath of sortedModulePaths) {
+      if (
+        (modulePath === "." && !assignedFiles.has(file.relativePath)) ||
+        (file.relativePath.startsWith(modulePath + "/") && !assignedFiles.has(file.relativePath))
+      ) {
+        moduleFilesMap.get(modulePath)!.push(file);
+        assignedFiles.add(file.relativePath);
+        break;
+      }
+    }
+  }
+
+  // Construct DetectedModule objects
   const modules: DetectedModule[] = [];
 
-  for (const [directoryName, files] of directoryGroups) {
-    const moduleName = directoryName === "." ? "root" : directoryName;
-    const locationPath = directoryName === "." ? "." : directoryName;
+  for (const modulePath of sortedModulePaths) {
+    const files = moduleFilesMap.get(modulePath) ?? [];
+    if (files.length === 0 && modulePath !== ".") {
+      continue;
+    }
+
+    const moduleName = modulePath === "." ? "root" : modulePath;
+    const locationPath = modulePath;
     const languages = [...new Set(files.map((file) => file.language))];
     const entryPointFile = findEntryPointFile(files);
 
-    modules.push(createDetectedModule(
-      moduleName,
-      locationPath,
-      files,
-      languages,
-      entryPointFile,
-    ));
+    // Find parent module: the longest modulePath that is a prefix of this module's path
+    let parentModuleName: string | null = null;
+    if (modulePath !== ".") {
+      const parts = modulePath.split("/");
+      parts.pop();
+      let currentParent = parts.join("/");
+      while (currentParent) {
+        if (modulePaths.has(currentParent)) {
+          parentModuleName = currentParent === "." ? "root" : currentParent;
+          break;
+        }
+        const tempParts = currentParent.split("/");
+        tempParts.pop();
+        currentParent = tempParts.join("/");
+      }
+      if (parentModuleName === null && modulePaths.has(".")) {
+        parentModuleName = "root";
+      }
+    }
+
+    modules.push({
+      ...createDetectedModule(
+        moduleName,
+        locationPath,
+        files,
+        languages,
+        entryPointFile,
+      ),
+      parentModuleName,
+      subModuleNames: [],
+    });
+  }
+
+  // Populate subModuleNames
+  for (const mod of modules) {
+    if (mod.parentModuleName) {
+      const parent = modules.find((m) => m.moduleName === mod.parentModuleName);
+      if (parent) {
+        if (!parent.subModuleNames) {
+          (parent as any).subModuleNames = [];
+        }
+        parent.subModuleNames!.push(mod.moduleName);
+      }
+    }
   }
 
   return modules;
@@ -288,6 +380,8 @@ function createDetectedModule(
     containedFilePaths: files.map((file) => file.relativePath),
     containedLanguages: languages,
     entryPointFilePath,
+    parentModuleName: null,
+    subModuleNames: [],
   };
 }
 
