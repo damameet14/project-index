@@ -58,14 +58,25 @@ export async function initializeAgentDirectory(
   logSuccess(`Created: ${agentsMdPath}`);
 
   // Copy skill bundle
-  // Package root is 2 levels up from dist/agent_scaffolding/ or source/agent_scaffolding/
-  const packageRoot = join(__dirname, "..", "..");
-  const skillSourcePath = join(
-    packageRoot,
+  // Try to find assets/skills relative to __dirname (handles both bundled dist/ and source/)
+  let skillSourcePath = join(
+    __dirname,
+    "..",
     "assets",
     "skills",
     "ai-navigable-modular-coding",
   );
+
+  if (!existsSync(skillSourcePath)) {
+    skillSourcePath = join(
+      __dirname,
+      "..",
+      "..",
+      "assets",
+      "skills",
+      "ai-navigable-modular-coding",
+    );
+  }
 
   const skillDestPath = join(
     agentsDirPath,
