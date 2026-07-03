@@ -62,7 +62,7 @@ export async function initializeAgentDirectory(
   const packageRoot = join(__dirname, "..", "..");
   const skillSourcePath = join(
     packageRoot,
-    ".agents",
+    "assets",
     "skills",
     "ai-navigable-modular-coding",
   );
