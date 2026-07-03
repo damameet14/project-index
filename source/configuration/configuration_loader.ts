@@ -15,6 +15,11 @@ import { logDebug, logInformation } from "../shared_utilities/index.js";
 
 const CONFIGURATION_MODULE_NAME = "project-index";
 
+type ProjectIndexConfigurationFile = Partial<ProjectIndexConfiguration> & {
+  /** Backward-compatible/documented alias for restrictToIncludePaths. */
+  readonly sourceDirectories?: string[];
+};
+
 /**
  * Load Project Index configuration by searching standard config file locations.
  * Returns the merged configuration (user overrides + defaults).
@@ -47,13 +52,14 @@ export async function loadProjectIndexConfiguration(
     `Configuration loaded from: ${discoveredConfiguration.filepath}`,
   );
 
-  const userProvidedValues = discoveredConfiguration.config as Partial<ProjectIndexConfiguration>;
+  const userProvidedValues =
+    discoveredConfiguration.config as ProjectIndexConfigurationFile;
 
   return mergeConfigurationWithDefaults(userProvidedValues);
 }
 
 function mergeConfigurationWithDefaults(
-  partialConfiguration: Partial<ProjectIndexConfiguration>,
+  partialConfiguration: ProjectIndexConfigurationFile,
 ): ProjectIndexConfiguration {
   return {
     outputDirectoryName:
@@ -67,6 +73,7 @@ function mergeConfigurationWithDefaults(
       DEFAULT_PROJECT_INDEX_CONFIGURATION.additionalIgnorePatterns,
     restrictToIncludePaths:
       partialConfiguration.restrictToIncludePaths ??
+      partialConfiguration.sourceDirectories ??
       DEFAULT_PROJECT_INDEX_CONFIGURATION.restrictToIncludePaths,
     isMonorepoDetectionEnabled:
       partialConfiguration.isMonorepoDetectionEnabled ??

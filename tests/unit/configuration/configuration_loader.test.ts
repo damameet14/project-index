@@ -1,4 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { loadProjectIndexConfiguration } from "../../../source/configuration/configuration_loader.js";
 import { DEFAULT_PROJECT_INDEX_CONFIGURATION } from "../../../source/configuration/configuration_schema.js";
 
@@ -18,5 +21,18 @@ describe("Configuration Loader", () => {
     expect(config.outputDirectoryName).toBe(DEFAULT_PROJECT_INDEX_CONFIGURATION.outputDirectoryName);
     expect(config.enabledLanguages).toEqual(DEFAULT_PROJECT_INDEX_CONFIGURATION.enabledLanguages);
     expect(config.isMonorepoDetectionEnabled).toBe(DEFAULT_PROJECT_INDEX_CONFIGURATION.isMonorepoDetectionEnabled);
+  });
+
+  it("accepts sourceDirectories as an alias for restrictToIncludePaths", async () => {
+    const temporaryDirectory = await mkdtemp(join(tmpdir(), "project-index-config-"));
+    await writeFile(
+      join(temporaryDirectory, ".project-indexrc.json"),
+      JSON.stringify({ sourceDirectories: ["src", "packages/api"] }),
+      "utf-8",
+    );
+
+    const config = await loadProjectIndexConfiguration(temporaryDirectory);
+
+    expect(config.restrictToIncludePaths).toEqual(["src", "packages/api"]);
   });
 });

@@ -106,8 +106,11 @@ async function locatePythonWasmGrammar(): Promise<string> {
     // wasm/ directory at project root
     searchPaths.push(join(currentDirectory, "..", "..", "..", "wasm", "tree-sitter-python.wasm"));
     searchPaths.push(join(currentDirectory, "..", "..", "wasm", "tree-sitter-python.wasm"));
+    searchPaths.push(join(currentDirectory, "..", "wasm", "tree-sitter-python.wasm"));
 
     // node_modules locations
+    searchPaths.push(join(currentDirectory, "..", "node_modules", "tree-sitter-wasms", "out", "tree-sitter-python.wasm"));
+    searchPaths.push(join(currentDirectory, "..", "node_modules", "tree-sitter-python", "tree-sitter-python.wasm"));
     searchPaths.push(join(currentDirectory, "..", "..", "..", "node_modules", "tree-sitter-python", "tree-sitter-python.wasm"));
     searchPaths.push(join(currentDirectory, "..", "..", "..", "node_modules", "tree-sitter-wasms", "out", "tree-sitter-python.wasm"));
   } catch {
@@ -116,6 +119,7 @@ async function locatePythonWasmGrammar(): Promise<string> {
 
   // Current working directory locations
   searchPaths.push(join(process.cwd(), "wasm", "tree-sitter-python.wasm"));
+  searchPaths.push(join(process.cwd(), "node_modules", "tree-sitter-wasms", "out", "tree-sitter-python.wasm"));
   searchPaths.push(join(process.cwd(), "node_modules", "tree-sitter-python", "tree-sitter-python.wasm"));
 
   for (const candidatePath of searchPaths) {
@@ -132,7 +136,8 @@ async function locatePythonWasmGrammar(): Promise<string> {
     "",
     "Please ensure the WASM file is available. You can:",
     "  1. Place it in the wasm/ directory of the project",
-    "  2. Install tree-sitter-python: npm install tree-sitter-python",
+    "  2. Install tree-sitter-wasms: npm install tree-sitter-wasms",
+    "  3. Or install tree-sitter-python if it provides tree-sitter-python.wasm",
   ].join("\n");
 
   logError(errorMessage);

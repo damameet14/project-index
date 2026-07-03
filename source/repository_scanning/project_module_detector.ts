@@ -6,7 +6,7 @@
  * based on project manifests and directory structure.
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join, basename } from "node:path";
 import type { DetectedModule } from "../contracts/index.js";
@@ -24,11 +24,6 @@ const PROJECT_MANIFEST_FILE_NAMES = [
   "setup.py",
   "setup.cfg",
 ];
-
-/**
- * Files whose presence indicates a Python package.
- */
-const PYTHON_PACKAGE_INDICATOR_FILE_NAMES = ["__init__.py"];
 
 /**
  * Common entry point file names for automatic detection.
@@ -58,12 +53,14 @@ export async function detectProjectModules(
   repositoryRootPath: string,
   ignoreResolver: IgnorePatternResolver,
   isMonorepoDetectionEnabled: boolean,
+  restrictToIncludePaths: string[] = [],
 ): Promise<{
   detectedModules: DetectedModule[];
   allDiscoveredFiles: DiscoveredFileEntry[];
 }> {
   const allDiscoveredFiles: DiscoveredFileEntry[] = [];
   const subProjectRoots: string[] = [];
+  const normalizedIncludePaths = normalizeIncludePaths(restrictToIncludePaths);
 
   // 1. Recursively discover all source files and sub-project roots
   await discoverFilesRecursively(
@@ -73,6 +70,7 @@ export async function detectProjectModules(
     allDiscoveredFiles,
     subProjectRoots,
     isMonorepoDetectionEnabled,
+    normalizedIncludePaths,
   );
 
   logInformation(
@@ -99,6 +97,7 @@ async function discoverFilesRecursively(
   discoveredFiles: DiscoveredFileEntry[],
   subProjectRoots: string[],
   isMonorepoDetectionEnabled: boolean,
+  normalizedIncludePaths: string[],
   depth: number = 0,
 ): Promise<void> {
   const directoryEntries = await readdir(currentDirectoryPath, {
@@ -136,6 +135,10 @@ async function discoverFilesRecursively(
     }
 
     if (entry.isDirectory()) {
+      if (!shouldDescendIntoDirectory(entryRelativePath, normalizedIncludePaths)) {
+        continue;
+      }
+
       await discoverFilesRecursively(
         entryAbsolutePath,
         repositoryRootPath,
@@ -143,9 +146,14 @@ async function discoverFilesRecursively(
         discoveredFiles,
         subProjectRoots,
         isMonorepoDetectionEnabled,
+        normalizedIncludePaths,
         depth + 1,
       );
-    } else if (entry.isFile() && isFilePathSupportedLanguage(entry.name)) {
+    } else if (
+      entry.isFile() &&
+      isPathWithinIncludedPaths(entryRelativePath, normalizedIncludePaths) &&
+      isFilePathSupportedLanguage(entry.name)
+    ) {
       const language = detectLanguageFromFilePath(entry.name);
       if (language !== null) {
         discoveredFiles.push({
@@ -156,6 +164,45 @@ async function discoverFilesRecursively(
       }
     }
   }
+}
+
+function normalizeIncludePaths(includePaths: string[]): string[] {
+  return includePaths
+    .map((includePath) => includePath.replace(/\\/g, "/").replace(/^\/+|\/+$/g, ""))
+    .filter((includePath) => includePath.length > 0 && includePath !== ".");
+}
+
+function shouldDescendIntoDirectory(
+  relativeDirectoryPath: string,
+  normalizedIncludePaths: string[],
+): boolean {
+  if (normalizedIncludePaths.length === 0) {
+    return true;
+  }
+
+  const normalizedDirectoryPath = relativeDirectoryPath.replace(/\\/g, "/");
+  return normalizedIncludePaths.some(
+    (includePath) =>
+      includePath === normalizedDirectoryPath ||
+      includePath.startsWith(`${normalizedDirectoryPath}/`) ||
+      normalizedDirectoryPath.startsWith(`${includePath}/`),
+  );
+}
+
+function isPathWithinIncludedPaths(
+  relativeFilePath: string,
+  normalizedIncludePaths: string[],
+): boolean {
+  if (normalizedIncludePaths.length === 0) {
+    return true;
+  }
+
+  const normalizedFilePath = relativeFilePath.replace(/\\/g, "/");
+  return normalizedIncludePaths.some(
+    (includePath) =>
+      normalizedFilePath === includePath ||
+      normalizedFilePath.startsWith(`${includePath}/`),
+  );
 }
 
 function buildModulesFromDiscoveredFiles(
@@ -383,14 +430,6 @@ function createDetectedModule(
     parentModuleName: null,
     subModuleNames: [],
   };
-}
-
-function getTopLevelDirectory(relativePath: string): string {
-  const firstSlashIndex = relativePath.indexOf("/");
-  if (firstSlashIndex === -1) {
-    return ".";
-  }
-  return relativePath.slice(0, firstSlashIndex);
 }
 
 function findEntryPointFile(

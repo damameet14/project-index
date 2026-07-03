@@ -118,7 +118,7 @@ Project Index uses [cosmiconfig](https://github.com/cosmiconfig/cosmiconfig) for
 ```json
 {
   "outputDirectory": ".project-index",
-  "sourceDirectories": ["src", "source", "lib"],
+  "restrictToIncludePaths": ["src", "source", "lib"],
   "additionalIgnorePatterns": ["**/*.test.ts", "**/*.spec.ts"]
 }
 ```

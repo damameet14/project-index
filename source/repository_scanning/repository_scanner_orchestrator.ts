@@ -69,6 +69,7 @@ export async function executeRepositoryScan(
     repositoryRootPath,
     ignoreResolver,
     configuration.isMonorepoDetectionEnabled,
+    configuration.restrictToIncludePaths,
   );
 
   if (allDiscoveredFiles.length === 0) {

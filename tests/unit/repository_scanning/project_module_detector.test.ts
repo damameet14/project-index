@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { detectProjectModules } from "../../../source/repository_scanning/project_module_detector.js";
 import type { IgnorePatternResolver } from "../../../source/repository_scanning/ignore_pattern_resolver.js";
 import { existsSync } from "node:fs";
-import { readdir, stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 
 vi.mock("node:fs", async () => {
   const actual = await vi.importActual<typeof import("node:fs")>("node:fs");
@@ -17,7 +17,6 @@ vi.mock("node:fs/promises", async () => {
   return {
     ...actual,
     readdir: vi.fn(),
-    stat: vi.fn(),
     readFile: vi.fn().mockResolvedValue(""),
   };
 });
@@ -94,12 +93,6 @@ describe("Project Module Detector", () => {
       return Promise.resolve([]);
     });
 
-    vi.mocked(stat).mockImplementation((path: any) => {
-      return Promise.resolve({
-        isDirectory: () => !String(path).endsWith(".ts"),
-      } as any);
-    });
-
     const { detectedModules } = await detectProjectModules(
       "/project-root",
       mockIgnoreResolver,
@@ -128,5 +121,63 @@ describe("Project Module Detector", () => {
     expect(sourceModule?.subModuleNames).toContain("source/command_line_interface");
     expect(sourceModule?.subModuleNames).toContain("source/repository_scanning");
     expect(sourceModule?.parentModuleName).toBe("root");
+  });
+
+  it("limits discovery to multiple configured include directories", async () => {
+    const mockIgnoreResolver = {
+      shouldIgnorePath: () => false,
+    } as unknown as IgnorePatternResolver;
+
+    vi.mocked(existsSync).mockReturnValue(false);
+
+    vi.mocked(readdir).mockImplementation((path: any) => {
+      const normalized = String(path).replace(/\\/g, "/");
+      if (normalized.endsWith("project-root")) {
+        return Promise.resolve([
+          { name: "src", isDirectory: () => true, isFile: () => false } as any,
+          { name: "lib", isDirectory: () => true, isFile: () => false } as any,
+          { name: "examples", isDirectory: () => true, isFile: () => false } as any,
+        ]);
+      }
+      if (normalized.endsWith("src")) {
+        return Promise.resolve([
+          { name: "index.ts", isDirectory: () => false, isFile: () => true } as any,
+          { name: "feature", isDirectory: () => true, isFile: () => false } as any,
+        ]);
+      }
+      if (normalized.endsWith("src/feature")) {
+        return Promise.resolve([
+          { name: "worker.ts", isDirectory: () => false, isFile: () => true } as any,
+        ]);
+      }
+      if (normalized.endsWith("lib")) {
+        return Promise.resolve([
+          { name: "helper.py", isDirectory: () => false, isFile: () => true } as any,
+        ]);
+      }
+      if (normalized.endsWith("examples")) {
+        return Promise.resolve([
+          { name: "demo.ts", isDirectory: () => false, isFile: () => true } as any,
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const { allDiscoveredFiles, detectedModules } = await detectProjectModules(
+      "/project-root",
+      mockIgnoreResolver,
+      false,
+      ["src/feature", "lib"],
+    );
+
+    expect(allDiscoveredFiles.map((file) => file.relativePath).sort()).toEqual([
+      "lib/helper.py",
+      "src/feature/worker.ts",
+    ]);
+    expect(detectedModules.map((module) => module.moduleName)).toContain("src");
+    expect(detectedModules.map((module) => module.moduleName)).toContain("lib");
+    expect(detectedModules.flatMap((module) => module.containedFilePaths)).not.toContain(
+      "examples/demo.ts",
+    );
   });
 });
