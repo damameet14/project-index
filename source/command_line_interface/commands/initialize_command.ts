@@ -11,6 +11,7 @@ import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
 import { DEFAULT_PROJECT_INDEX_CONFIGURATION } from "../../configuration/index.js";
 import { logInformation, logSuccess, logWarning, setLogLevel } from "../../shared_utilities/index.js";
+import { initializeAgentDirectory } from "../../agent_scaffolding/index.js";
 
 export function initializeCommand(): Command {
   return new Command("init")
@@ -55,6 +56,9 @@ export function initializeCommand(): Command {
         );
         logSuccess(`Created default configuration: ${configFilePath}`);
       }
+
+      // Create .agents/ scaffolding
+      await initializeAgentDirectory(repositoryRootPath);
 
       logInformation("Project Index initialized. Run 'project-index scan' to generate indexes.");
     });
