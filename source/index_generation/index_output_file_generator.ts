@@ -5,7 +5,8 @@
  * and a SQLite database, then writes them to the output directory.
  */
 
-import { join } from "node:path";
+import { join, dirname } from "node:path";
+import { writeFile, mkdir } from "node:fs/promises";
 import type { ExtractedSymbol } from "../contracts/index.js";
 import type { DetectedModule } from "../contracts/index.js";
 import type { ExtractedClass } from "../contracts/index.js";
@@ -18,6 +19,7 @@ import { writeMultipleJSONFiles, writeJSONFileAtomically } from "../persistent_s
 import { writeSQLiteDatabaseFile } from "../persistent_storage/index.js";
 import { extractDirectoryPath } from "../shared_utilities/index.js";
 import { logInformation } from "../shared_utilities/index.js";
+import { generateSymbolRegistryMarkdown } from "./symbol_registry_generator.js";
 
 const SCHEMA_VERSION = "1.0.0";
 
@@ -122,6 +124,26 @@ export async function generateAllIndexOutputFiles(
   } catch (error) {
     logInformation(
       `SQLite database generation skipped: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  // Generate and write symbol registry
+  try {
+    const registryMarkdown = generateSymbolRegistryMarkdown(
+      enrichedModules,
+      allExtractedSymbols,
+    );
+    const registryPath = join(
+      input.repositoryRootPath,
+      ".agents",
+      "context",
+      "function_registry.md",
+    );
+    await mkdir(dirname(registryPath), { recursive: true });
+    await writeFile(registryPath, registryMarkdown, "utf-8");
+  } catch (error) {
+    logInformation(
+      `Symbol registry generation skipped: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
