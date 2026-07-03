@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "rootDir": "./source",
+    "baseUrl": ".",
+    "paths": {
+      "#contracts/*": ["./source/contracts/*"],
+      "#symbol-extraction/*": ["./source/symbol_extraction/*"],
+      "#index-generation/*": ["./source/index_generation/*"],
+      "#repository-scanning/*": ["./source/repository_scanning/*"],
+      "#command-line-interface/*": ["./source/command_line_interface/*"],
+      "#persistent-storage/*": ["./source/persistent_storage/*"],
+      "#shared-utilities/*": ["./source/shared_utilities/*"],
+      "#configuration/*": ["./source/configuration/*"]
+    }
+  },
+  "include": ["source/**/*.ts"],
+  "exclude": ["node_modules", "dist", "tests"]
+}
