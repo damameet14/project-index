@@ -26,11 +26,11 @@ export async function writeSQLiteDatabaseFile(
   const database = new SQL.Database();
 
   try {
-    createDatabaseSchema(database);
-    insertSymbolRecords(database, extractedSymbols);
-    insertClassRecords(database, extractedClasses);
-    insertFunctionRecords(database, extractedFunctions);
-    createDatabaseIndexes(database);
+    createSymbolsDatabaseSchema(database);
+    insertExtractedSymbolRecordsIntoDatabase(database, extractedSymbols);
+    insertExtractedClassRecordsIntoDatabase(database, extractedClasses);
+    insertExtractedFunctionRecordsIntoDatabase(database, extractedFunctions);
+    createSymbolsDatabaseSearchIndexes(database);
 
     // Export to file
     const binaryData = database.export();
@@ -48,7 +48,7 @@ export async function writeSQLiteDatabaseFile(
   }
 }
 
-function createDatabaseSchema(database: Database): void {
+function createSymbolsDatabaseSchema(database: Database): void {
   database.run(`
     CREATE TABLE symbols (
       symbol_identifier TEXT PRIMARY KEY,
@@ -111,7 +111,7 @@ function createDatabaseSchema(database: Database): void {
   logDebug("SQLite database schema created.");
 }
 
-function insertSymbolRecords(
+function insertExtractedSymbolRecordsIntoDatabase(
   database: Database,
   symbols: ExtractedSymbol[],
 ): void {
@@ -157,7 +157,7 @@ function insertSymbolRecords(
   statement.free();
 }
 
-function insertClassRecords(
+function insertExtractedClassRecordsIntoDatabase(
   database: Database,
   classes: ExtractedClass[],
 ): void {
@@ -187,7 +187,7 @@ function insertClassRecords(
   statement.free();
 }
 
-function insertFunctionRecords(
+function insertExtractedFunctionRecordsIntoDatabase(
   database: Database,
   functions: ExtractedFunction[],
 ): void {
@@ -220,7 +220,7 @@ function insertFunctionRecords(
   statement.free();
 }
 
-function createDatabaseIndexes(database: Database): void {
+function createSymbolsDatabaseSearchIndexes(database: Database): void {
   database.run("CREATE INDEX idx_symbols_name ON symbols (symbol_name);");
   database.run("CREATE INDEX idx_symbols_kind ON symbols (symbol_kind);");
   database.run("CREATE INDEX idx_symbols_module ON symbols (module_name);");

@@ -55,7 +55,7 @@ export async function generateAllIndexOutputFiles(
   const generatedTimestamp = new Date().toISOString();
 
   // Build dependency graph with circular detection
-  const dependencyGraph = buildDependencyGraph(
+  const dependencyGraph = buildModuleDependencyGraphFromFileDependencies(
     allExtractedDependencies,
     detectedModules,
   );
@@ -68,7 +68,7 @@ export async function generateAllIndexOutputFiles(
   );
 
   // Generate context.json
-  const projectContext = buildProjectContext(
+  const projectContext = buildProjectContextSummaryFromScanResults(
     input,
     enrichedModules,
     allExtractedSymbols,
@@ -78,7 +78,7 @@ export async function generateAllIndexOutputFiles(
   );
 
   // Generate statistics.json
-  const scanStatistics = buildScanStatistics(
+  const scanStatistics = buildScanStatisticsSummaryFromExtractedData(
     allExtractedSymbols,
     allExtractedClasses,
     allExtractedFunctions,
@@ -134,7 +134,7 @@ export async function generateAllIndexOutputFiles(
 
 // ── Context builder ─────────────────────────────────────────────────
 
-function buildProjectContext(
+function buildProjectContextSummaryFromScanResults(
   input: IndexGenerationInput,
   modules: DetectedModule[],
   symbols: ExtractedSymbol[],
@@ -173,7 +173,7 @@ function buildProjectContext(
     .sort()
     .map((directoryPath) => ({
       directoryPath,
-      description: inferDirectoryDescription(directoryPath, modules),
+      description: inferDirectoryDescriptionFromModuleMetadata(directoryPath, modules),
     }));
 
   return {
@@ -190,13 +190,13 @@ function buildProjectContext(
       totalClassCount: classes.length,
       totalFunctionCount: functions.length,
       detectedLanguages: languages,
-      detectedFrameworks: detectFrameworks(modules),
+      detectedFrameworks: detectFrameworksFromModuleTechnologies(modules),
       identifiedEntryPoints: entryPoints,
     },
     modules: moduleSummaries,
     conventions: {
-      sourceRootPath: inferSourceRoot(symbols),
-      testFilePattern: inferTestPattern(symbols),
+      sourceRootPath: inferSourceRootDirectoryFromSymbolPaths(symbols),
+      testFilePattern: inferTestFileGlobPatternFromSymbolPaths(symbols),
       configurationFiles: [],
     },
     directoryDescriptions,
@@ -205,7 +205,7 @@ function buildProjectContext(
 
 // ── Statistics builder ──────────────────────────────────────────────
 
-function buildScanStatistics(
+function buildScanStatisticsSummaryFromExtractedData(
   symbols: ExtractedSymbol[],
   classes: ExtractedClass[],
   functions: ExtractedFunction[],
@@ -258,12 +258,12 @@ function buildScanStatistics(
 
 // ── Dependency graph builder ────────────────────────────────────────
 
-export function buildDependencyGraph(
+export function buildModuleDependencyGraphFromFileDependencies(
   fileDependencies: ExtractedFileDependency[],
   modules: DetectedModule[],
 ): DependencyGraph {
-  const moduleDependencies = buildModuleDependencyEdges(fileDependencies, modules);
-  const circularDependencies = detectCircularDependencies(moduleDependencies);
+  const moduleDependencies = buildModuleDependencyEdgesFromFileDependencies(fileDependencies, modules);
+  const circularDependencies = detectCircularModuleDependencies(moduleDependencies);
 
   return {
     fileDependencies,
@@ -272,7 +272,7 @@ export function buildDependencyGraph(
   };
 }
 
-function buildModuleDependencyEdges(
+function buildModuleDependencyEdgesFromFileDependencies(
   fileDependencies: ExtractedFileDependency[],
   modules: DetectedModule[],
 ): ModuleDependencyEdge[] {
@@ -283,8 +283,8 @@ function buildModuleDependencyEdges(
       continue;
     }
 
-    const sourceModule = findModuleForFile(dependency.sourceFilePath, modules);
-    const targetModule = findModuleForFile(
+    const sourceModule = findContainingModuleNameForFilePath(dependency.sourceFilePath, modules);
+    const targetModule = findContainingModuleNameForFilePath(
       dependency.resolvedTargetFilePath,
       modules,
     );
@@ -322,7 +322,7 @@ function buildModuleDependencyEdges(
   return [...edges.values()];
 }
 
-function findModuleForFile(
+function findContainingModuleNameForFilePath(
   filePath: string,
   modules: DetectedModule[],
 ): string | null {
@@ -334,7 +334,7 @@ function findModuleForFile(
   return null;
 }
 
-function detectCircularDependencies(
+function detectCircularModuleDependencies(
   edges: ModuleDependencyEdge[],
 ): CircularDependencyChain[] {
   const adjacencyList = new Map<string, Set<string>>();
@@ -350,7 +350,7 @@ function detectCircularDependencies(
   const visited = new Set<string>();
   const recursionStack = new Set<string>();
 
-  function depthFirstSearch(
+  function searchForCircularDependenciesUsingDepthFirst(
     currentNode: string,
     path: string[],
   ): void {
@@ -370,7 +370,7 @@ function detectCircularDependencies(
           description: `Circular dependency: ${cycleNodes.join(" → ")}`,
         });
       } else if (!visited.has(neighbor)) {
-        depthFirstSearch(neighbor, path);
+        searchForCircularDependenciesUsingDepthFirst(neighbor, path);
       }
     }
 
@@ -380,7 +380,7 @@ function detectCircularDependencies(
 
   for (const node of adjacencyList.keys()) {
     if (!visited.has(node)) {
-      depthFirstSearch(node, []);
+      searchForCircularDependenciesUsingDepthFirst(node, []);
     }
   }
 
@@ -421,7 +421,7 @@ function enrichModulesWithDependencies(
 
 // ── Inference helpers ───────────────────────────────────────────────
 
-function inferSourceRoot(symbols: ExtractedSymbol[]): string | null {
+function inferSourceRootDirectoryFromSymbolPaths(symbols: ExtractedSymbol[]): string | null {
   const topLevelDirectories = new Set<string>();
   for (const symbol of symbols) {
     const parts = symbol.filePath.split("/");
@@ -440,7 +440,7 @@ function inferSourceRoot(symbols: ExtractedSymbol[]): string | null {
   return null;
 }
 
-function inferTestPattern(symbols: ExtractedSymbol[]): string | null {
+function inferTestFileGlobPatternFromSymbolPaths(symbols: ExtractedSymbol[]): string | null {
   const testFiles = symbols.filter(
     (symbol) =>
       symbol.filePath.includes(".test.") ||
@@ -462,7 +462,7 @@ function inferTestPattern(symbols: ExtractedSymbol[]): string | null {
   return null;
 }
 
-function inferDirectoryDescription(
+function inferDirectoryDescriptionFromModuleMetadata(
   directoryPath: string,
   modules: DetectedModule[],
 ): string {
@@ -477,7 +477,7 @@ function inferDirectoryDescription(
   return `${directoryName} directory`;
 }
 
-function detectFrameworks(modules: DetectedModule[]): string[] {
+function detectFrameworksFromModuleTechnologies(modules: DetectedModule[]): string[] {
   const frameworks = new Set<string>();
   for (const module of modules) {
     for (const technology of module.detectedTechnologies) {
