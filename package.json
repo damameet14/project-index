@@ -1,6 +1,6 @@
 {
   "name": "project-index",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A local-first developer tool that generates machine-readable semantic repository indexes optimized for AI coding assistants.",
   "type": "module",
   "bin": {
@@ -8,6 +8,12 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist/",
+    "assets/",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "tsup",
     "development": "tsup --watch",
@@ -25,9 +31,21 @@
     "semantic-index",
     "code-analysis",
     "typescript-parser",
-    "python-parser"
+    "python-parser",
+    "code-navigation",
+    "symbol-registry",
+    "ai-agent"
   ],
+  "author": "damameet14",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/damameet14/project-index.git"
+  },
+  "homepage": "https://github.com/damameet14/project-index#readme",
+  "bugs": {
+    "url": "https://github.com/damameet14/project-index/issues"
+  },
   "engines": {
     "node": ">=18.0.0"
   },

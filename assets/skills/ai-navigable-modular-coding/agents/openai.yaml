@@ -1,7 +1,0 @@
-interface:
-  display_name: "AI-Navigable Modular Coding"
-  short_description: "Descriptive, contract-first modular coding with narrow AI change scope"
-  brand_color: "#C97966"
-  default_prompt: "Use the AI-Navigable Modular Coding skill to implement this change with descriptive names, explicit contracts, stable module boundaries, and the smallest responsible change set."
-policy:
-  allow_implicit_invocation: true
