@@ -43,3 +43,41 @@ source/
 - File names use snake_case describing the primary responsibility
 - Each module has a barrel export `index.ts` as its public interface
 - External modules import only from the public interface
+
+## Setup & Installation
+
+To set up the project locally for development:
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+2. **Build the project:**
+   ```bash
+   npm run build
+   ```
+3. **Run tests:**
+   ```bash
+   npm run test
+   ```
+
+## Usage
+
+You can run the CLI tool directly from the source code during development using `tsx`, or you can run the compiled JavaScript.
+
+**Initialize configuration:**
+```bash
+npx tsx source/index.ts init
+```
+
+**Run a repository scan:**
+```bash
+npx tsx source/index.ts scan
+```
+
+**Watch mode (continuously update on file changes):**
+```bash
+npx tsx source/index.ts watch
+```
+
+*(Note: If you have already built the project, you can replace `npx tsx source/index.ts` with `node dist/index.js`)*
