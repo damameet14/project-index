@@ -13,6 +13,7 @@ import { validateCommand } from "./commands/validate_command.js";
 import { statisticsCommand } from "./commands/statistics_command.js";
 import { cleanCommand } from "./commands/clean_command.js";
 import { doctorCommand } from "./commands/doctor_command.js";
+import { queryCommand } from "./commands/query_command.js";
 
 export function createCommandLineProgram(): Command {
   const program = new Command();
@@ -31,6 +32,7 @@ export function createCommandLineProgram(): Command {
   program.addCommand(statisticsCommand());
   program.addCommand(cleanCommand());
   program.addCommand(doctorCommand());
+  program.addCommand(queryCommand());
 
   return program;
 }
