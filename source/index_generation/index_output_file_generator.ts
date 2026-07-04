@@ -20,6 +20,7 @@ import { writeSQLiteDatabaseFile } from "../persistent_storage/index.js";
 import { extractDirectoryPath } from "../shared_utilities/index.js";
 import { logInformation } from "../shared_utilities/index.js";
 import { generateSymbolRegistryMarkdown } from "./symbol_registry_generator.js";
+import { generateAllModuleDiagramFiles } from "../diagram_generation/index.js";
 
 const SCHEMA_VERSION = "1.0.0";
 
@@ -144,6 +145,20 @@ export async function generateAllIndexOutputFiles(
   } catch (error) {
     logInformation(
       `Symbol registry generation skipped: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+
+  // Generate and write module flowchart & sequence diagrams
+  try {
+    await generateAllModuleDiagramFiles({
+      repositoryRootPath: input.repositoryRootPath,
+      detectedModules: enrichedModules,
+      allExtractedSymbols,
+      allExtractedDependencies,
+    });
+  } catch (error) {
+    logInformation(
+      `Module diagram generation skipped: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 

@@ -6,6 +6,47 @@ _No symbols extracted._
 
 ---
 
+## Module: .agents
+### Classes
+- BoundaryFinding
+- NamingFinding
+
+### Functions
+- evaluate_name
+- extract_import_module_identity
+- inspect_file
+- inspect_javascript_or_typescript_file
+- inspect_python_file
+- is_likely_allowed_public_import
+- iter_repository_paths
+- iter_visible_children
+- main
+- main
+- main
+- main
+- module_identity_for_path
+- parse_arguments
+- parse_arguments
+- parse_arguments
+- print_tree
+- split_identifier_words
+
+### Constants
+- ALLOWED_PUBLIC_SEGMENT_NAMES
+- DEFAULT_EXCLUDED_DIRECTORY_NAMES
+- EXCLUDED_DIRECTORY_NAMES
+- EXCLUDED_DIRECTORY_NAMES
+- JAVASCRIPT_IDENTIFIER_PATTERN
+- MODULE_CONTAINER_NAMES
+- PROHIBITED_SHORTENED_WORDS
+- PYTHON_IMPORT_PATTERN
+- SKILL_FOLDER_NAME
+- SOURCE_FILE_SUFFIXES
+- TYPESCRIPT_IMPORT_PATTERN
+- VAGUE_COMPLETE_NAMES
+
+---
+
 ## Module: assets
 ### Classes
 - BoundaryFinding
@@ -125,6 +166,21 @@ _No symbols extracted._
 - SymbolKind
 - SymbolRelationshipKind
 - SymbolVisibility
+
+---
+
+## Module: source/diagram_generation
+### Functions
+- generateAllModuleDiagramFiles
+- generateModuleDiagramMarkdown
+- generateModuleFlowchartDiagram
+- generateModuleSequenceDiagram
+- sanitizeMermaidLabel
+- sanitizeModuleNameForFileName
+- sanitizeSequenceLabel
+
+### Interfaces
+- ModuleDiagramGeneratorInput
 
 ---
 
