@@ -23,21 +23,35 @@ const PROJECT_MANIFEST_FILE_NAMES = [
   "pyproject.toml",
   "setup.py",
   "setup.cfg",
+  "requirements.txt",
+  "Pipfile",
+  "poetry.lock",
+  "poetry.toml",
+  "environment.yml",
+  "environment.yaml",
+  "conda.yaml",
+  "tox.ini",
+  "manage.py",
 ];
 
 /**
  * Common entry point file names for automatic detection.
  */
 const ENTRY_POINT_FILE_NAME_CANDIDATES = [
+  "__init__.py",
+  "__main__.py",
+  "main.py",
+  "app.py",
+  "manage.py",
+  "cli.py",
+  "server.py",
+  "wsgi.py",
+  "asgi.py",
   "index.ts",
   "index.tsx",
   "main.ts",
   "app.ts",
   "server.ts",
-  "__main__.py",
-  "main.py",
-  "app.py",
-  "manage.py",
 ];
 
 interface DiscoveredFileEntry {
@@ -291,17 +305,42 @@ function buildModulesFromDirectoryStructure(
   modulePaths.add("."); // Root module is always there
 
   const isEntryPointFile = (fileName: string) => {
-    return ["index.ts", "index.tsx", "index.js", "index.jsx", "__init__.py"].includes(fileName);
+    return [
+      "__init__.py",
+      "__main__.py",
+      "main.py",
+      "app.py",
+      "manage.py",
+      "cli.py",
+      "server.py",
+      "wsgi.py",
+      "asgi.py",
+      "index.ts",
+      "index.tsx",
+      "index.js",
+      "index.jsx",
+      "main.ts",
+      "app.ts",
+      "server.ts",
+    ].includes(fileName);
   };
 
   const hasModuleDeclaration = (dirPath: string) => {
     if (dirPath === ".") return false;
     const moduleMdPath = join(repositoryRootPath, dirPath, "MODULE.md");
-    return existsSync(moduleMdPath);
+    if (existsSync(moduleMdPath)) {
+      return true;
+    }
+    for (const manifestName of PROJECT_MANIFEST_FILE_NAMES) {
+      if (existsSync(join(repositoryRootPath, dirPath, manifestName))) {
+        return true;
+      }
+    }
+    return false;
   };
 
-  // Find all directories that contain entry points or have MODULE.md on disk,
-  // plus the top-level directories of all discovered files.
+  // Find all directories that contain entry points, manifests, or MODULE.md on disk,
+  // plus top-level and feature directories of all discovered files.
   for (const file of discoveredFiles) {
     const relativePath = file.relativePath;
     const parts = relativePath.split("/");
@@ -311,9 +350,35 @@ function buildModulesFromDirectoryStructure(
       modulePaths.add(parts[0]);
     }
 
-    let currentDir = parts.join("/");
+    if (parts.length >= 2) {
+      const containerRoots = [
+        "src",
+        "source",
+        "packages",
+        "services",
+        "apps",
+        "modules",
+        "libs",
+        "libraries",
+        "components",
+        "plugins",
+        "pkg",
+      ];
+      if (containerRoots.includes(parts[0])) {
+        modulePaths.add(parts.slice(0, 2).join("/"));
+      }
+    }
+
+    const immediateDir = parts.join("/");
+    if (immediateDir && immediateDir !== ".") {
+      if (isEntryPointFile(fileName) || hasModuleDeclaration(immediateDir)) {
+        modulePaths.add(immediateDir);
+      }
+    }
+
+    let currentDir = immediateDir;
     while (currentDir && currentDir !== ".") {
-      if (isEntryPointFile(fileName) || hasModuleDeclaration(currentDir)) {
+      if (hasModuleDeclaration(currentDir)) {
         modulePaths.add(currentDir);
       }
       const dirParts = currentDir.split("/");
@@ -350,7 +415,12 @@ function buildModulesFromDirectoryStructure(
 
   for (const modulePath of sortedModulePaths) {
     const files = moduleFilesMap.get(modulePath) ?? [];
-    if (files.length === 0 && modulePath !== ".") {
+    const isParentOfOtherModule = sortedModulePaths.some(
+      (otherPath) =>
+        otherPath !== modulePath &&
+        (otherPath.startsWith(`${modulePath}/`) || (modulePath === "." && otherPath !== ".")),
+    );
+    if (files.length === 0 && modulePath !== "." && !isParentOfOtherModule) {
       continue;
     }
 

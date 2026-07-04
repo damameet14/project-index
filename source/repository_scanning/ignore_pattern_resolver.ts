@@ -97,8 +97,14 @@ export async function createIgnorePatternResolver(
 
   return {
     shouldIgnorePath(relativePath: string): boolean {
-      // The `ignore` library expects forward-slash paths
-      const normalizedPath = relativePath.replace(/\\/g, "/");
+      if (!relativePath || relativePath === "." || relativePath.trim() === "") {
+        return false;
+      }
+      // The `ignore` library expects forward-slash paths without leading ./
+      const normalizedPath = relativePath.replace(/\\/g, "/").replace(/^\.\//, "");
+      if (!normalizedPath || normalizedPath === ".") {
+        return false;
+      }
       return ignoreInstance.ignores(normalizedPath);
     },
   };

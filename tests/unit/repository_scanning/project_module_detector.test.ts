@@ -180,4 +180,61 @@ describe("Project Module Detector", () => {
       "examples/demo.ts",
     );
   });
+
+  it("detects Python packages with __init__.py, requirements.txt, and subpackages", async () => {
+    const mockIgnoreResolver = {
+      shouldIgnorePath: () => false,
+    } as unknown as IgnorePatternResolver;
+
+    vi.mocked(existsSync).mockImplementation((path: any) => {
+      const normalized = String(path).replace(/\\/g, "/");
+      if (normalized.endsWith("src/services/requirements.txt")) {
+        return true;
+      }
+      return false;
+    });
+
+    vi.mocked(readdir).mockImplementation((path: any) => {
+      const normalized = String(path).replace(/\\/g, "/");
+      if (normalized.endsWith("python-root")) {
+        return Promise.resolve([
+          { name: "src", isDirectory: () => true, isFile: () => false } as any,
+        ]);
+      }
+      if (normalized.endsWith("src")) {
+        return Promise.resolve([
+          { name: "pkg_a", isDirectory: () => true, isFile: () => false } as any,
+          { name: "services", isDirectory: () => true, isFile: () => false } as any,
+        ]);
+      }
+      if (normalized.endsWith("src/pkg_a")) {
+        return Promise.resolve([
+          { name: "__init__.py", isDirectory: () => false, isFile: () => true } as any,
+          { name: "models.py", isDirectory: () => false, isFile: () => true } as any,
+        ]);
+      }
+      if (normalized.endsWith("src/services")) {
+        return Promise.resolve([
+          { name: "requirements.txt", isDirectory: () => false, isFile: () => true } as any,
+          { name: "api.py", isDirectory: () => false, isFile: () => true } as any,
+        ]);
+      }
+      return Promise.resolve([]);
+    });
+
+    const { detectedModules } = await detectProjectModules(
+      "/python-root",
+      mockIgnoreResolver,
+      false,
+    );
+
+    const moduleNames = detectedModules.map((m) => m.moduleName);
+    expect(moduleNames).toContain("src");
+    expect(moduleNames).toContain("src/pkg_a");
+    expect(moduleNames).toContain("src/services");
+
+    const pkgAModule = detectedModules.find((m) => m.moduleName === "src/pkg_a");
+    expect(pkgAModule?.entryPointFilePath).toBe("src/pkg_a/__init__.py");
+    expect(pkgAModule?.containedFilePaths).toContain("src/pkg_a/models.py");
+  });
 });
