@@ -18,6 +18,8 @@ export function initializeCommand(): Command {
     .description("Initialize Project Index in the current repository.")
     .option("--root <path>", "Repository root path", ".")
     .option("--verbose", "Enable verbose output")
+    .option("--claude", "Initialize .claude/ directory for Claude Code (instead of .agents/)")
+    .option("--all", "Initialize both .agents/ and .claude/ directories")
     .action(async (options) => {
       if (options.verbose) {
         setLogLevel("debug");
@@ -57,8 +59,16 @@ export function initializeCommand(): Command {
         logSuccess(`Created default configuration: ${configFilePath}`);
       }
 
-      // Create .agents/ scaffolding
-      await initializeAgentDirectory(repositoryRootPath);
+      // Determine what to initialize
+      const shouldInitAgents = !options.claude || options.all;
+      const shouldInitClaude = options.claude || options.all;
+
+      if (shouldInitAgents) {
+        await initializeAgentDirectory(repositoryRootPath, { initClaude: false });
+      }
+      if (shouldInitClaude) {
+        await initializeAgentDirectory(repositoryRootPath, { initAgents: false });
+      }
 
       logInformation("Project Index initialized. Run 'project-index scan' to generate indexes.");
     });

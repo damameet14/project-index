@@ -7,6 +7,7 @@
 
 import { join, dirname } from "node:path";
 import { writeFile, mkdir } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import type { ExtractedSymbol } from "../contracts/index.js";
 import type { DetectedModule } from "../contracts/index.js";
 import type { ExtractedClass } from "../contracts/index.js";
@@ -141,6 +142,19 @@ export async function generateAllIndexOutputFiles(
     );
     await mkdir(dirname(registryPath), { recursive: true });
     await writeFile(registryPath, registryMarkdown, "utf-8");
+
+    // Also write to .claude/context/ if .claude directory exists
+    const claudeDirPath = join(input.repositoryRootPath, ".claude");
+    if (existsSync(claudeDirPath)) {
+      const claudeRegistryPath = join(
+        input.repositoryRootPath,
+        ".claude",
+        "context",
+        "function_registry.md",
+      );
+      await mkdir(dirname(claudeRegistryPath), { recursive: true });
+      await writeFile(claudeRegistryPath, registryMarkdown, "utf-8");
+    }
   } catch (error) {
     logInformation(
       `Symbol registry generation skipped: ${error instanceof Error ? error.message : String(error)}`,

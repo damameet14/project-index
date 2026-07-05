@@ -36,6 +36,9 @@ describe("Agent Directory Initializer", () => {
       if (normalized.includes("skills/ai-navigable-modular-coding")) {
         return true;
       }
+      if (normalized.endsWith(".claude")) {
+        return false;
+      }
       return false;
     });
 
@@ -46,19 +49,42 @@ describe("Agent Directory Initializer", () => {
     expect(cp).toHaveBeenCalled();
   });
 
-  it("skips scaffolding if .agents/ directory already exists", async () => {
+  it("skips .agents/ scaffolding if .agents/ directory already exists, but still creates .claude/ if needed", async () => {
     vi.mocked(existsSync).mockImplementation((path: any) => {
       const normalized = String(path).replace(/\\/g, "/");
       if (normalized.endsWith(".agents")) {
         return true;
+      }
+      if (normalized.endsWith(".claude")) {
+        return false;
       }
       return false;
     });
 
     await initializeAgentDirectory("/test-project");
 
-    expect(mkdir).not.toHaveBeenCalled();
-    expect(writeFile).not.toHaveBeenCalled();
-    expect(cp).not.toHaveBeenCalled();
+    // .agents/ should not be touched
+    const mkdirCalls = vi.mocked(mkdir).mock.calls;
+    const agentsMkdirCalls = mkdirCalls.filter((call) =>
+      String(call[0]).includes(".agents")
+    );
+    expect(agentsMkdirCalls.length).toBe(0);
+
+    const writeFileCalls = vi.mocked(writeFile).mock.calls;
+    const agentsWriteCalls = writeFileCalls.filter((call) =>
+      String(call[0]).includes(".agents")
+    );
+    expect(agentsWriteCalls.length).toBe(0);
+
+    // But .claude/ should be created
+    const claudeMkdirCalls = mkdirCalls.filter((call) =>
+      String(call[0]).includes(".claude")
+    );
+    expect(claudeMkdirCalls.length).toBeGreaterThan(0);
+
+    const claudeWriteCalls = writeFileCalls.filter((call) =>
+      String(call[0]).includes(".claude")
+    );
+    expect(claudeWriteCalls.length).toBe(2);
   });
 });

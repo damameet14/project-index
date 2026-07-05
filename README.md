@@ -40,10 +40,19 @@ Initializes the project for indexing:
 
 - Creates `.project-index/` output directory
 - Writes a default `.project-indexrc.json` configuration file
-- Scaffolds `.agents/` directory with:
-  - `AGENTS.md` — instructions for AI agents
-  - `skills/ai-navigable-modular-coding/` — bundled coding standards
-  - `context/` — where the generated symbol registry lives
+
+By default, scaffolds `.agents/` directory with:
+- `AGENTS.md` — instructions for AI agents
+- `skills/ai-navigable-modular-coding/` — bundled coding standards
+- `context/` — where the generated symbol registry lives
+
+**Options:**
+- `--claude` — Initialize `.claude/` directory for Claude Code instead of `.agents/`
+  - Creates `CLAUDE.md` with project guidance
+  - Creates `settings.json` with default permissions
+  - Creates `hooks/`, `agents/`, `commands/`, `scripts/` subdirectories
+  - Copies `skills/ai-navigable-modular-coding/`
+- `--all` — Initialize both `.agents/` and `.claude/` directories
 
 ### `project-index scan`
 
